@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Maurice Vergeiltes Wikipedia</title>
+
+<style>
+:root {
+    --font-main: serif;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-main);
+    background: #f6f6f6;
+}
+
+/* HEADER */
+#header {
+    background: #ffffff;
+    border-bottom: 1px solid #a2a9b1;
+    padding: 8px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#headerRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+}
+
+#headerRight img {
+    width: 32px;
+    height: 32px;
+}
+
+/* LAYOUT */
+#container {
+    display: flex;
+}
+
+#sidebar {
+    width: 250px;
+    background: #f8f9fa;
+    border-right: 1px solid #a2a9b1;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+#sidebar input, #sidebar select, #sidebar button {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 6px;
+}
+
+#articleList a {
+    display: block;
+    color: #0645ad;
+    text-decoration: none;
+    margin: 5px 0;
+    cursor: pointer;
+}
+
+#content {
+    padding: 25px;
+    background: white;
+    width: 100%;
+}
+
+img.articleImage {
+    max-width: 100%;
+    margin-top: 10px;
+}
+
+/* ADMIN BOX */
+#adminBox {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: white;
+    border: 1px solid #a2a9b1;
+    padding: 10px;
+    width: 180px;
+    font-size: 13px;
+}
+
+#adminBox input {
+    width: 100%;
+    margin-bottom: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div id="header">
+    <div><strong>MiniWiki</strong></div>
+    <div id="headerRight">
+        <span>Maurice Vergeiltes Wikipedia</span>
+        <!-- Logo (kannst du ersetzen) -->
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAK0lEQVR42mNgGAWjYBSMglEwCkbBKBsFo2AUjIJRMAoGABJdAAH0n6X0AAAAAElFTkSuQmCC">
+    </div>
+</div>
+
+<div id="container">
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+    <input type="text" id="search" placeholder="Suchen..." oninput="searchArticles()">
+
+    <select onchange="setFont(this.value)">
+        <option value="serif">Wikipedia</option>
+        <option value="Arial, sans-serif">Modern</option>
+        <option value="'Times New Roman', serif">Klassisch</option>
+        <option value="monospace">Monospace</option>
+    </select>
+
+    <button onclick="showEditor()">➕ Artikel hinzufügen</button>
+
+    <div id="articleList"></div>
+</div>
+
+<!-- CONTENT -->
+<div id="content">
+    <h2>Willkommen</h2>
+    <p>Das ist Maurice vergeiltes Wikipedia™</p>
+</div>
+
+</div>
+
+<!-- ADMIN -->
+<div id="adminBox"></div>
+
+<script>
+const ADMIN_USER = "Maurice";
+const ADMIN_PASS = "1234";
+const MAX_IMAGE_SIZE = 500 * 1024;
+
+let isAdmin = JSON.parse(localStorage.getItem("admin")) || false;
+let articles = JSON.parse(localStorage.getItem("miniwiki")) || [];
+
+/* Admin UI */
+function renderAdminBox() {
+    const box = document.getElementById("adminBox");
+    box.innerHTML = isAdmin ? `
+        <strong>Admin: Maurice</strong><br>
+        <button onclick="logout()">Abmelden</button>
+    ` : `
+        <strong>Admin Login</strong><br>
+        <input id="adminUser" placeholder="Name">
+        <input id="adminPass" type="password" placeholder="Passwort">
+        <button onclick="login()">Login</button>
+    `;
+}
+
+function login() {
+    if (
+        adminUser.value === ADMIN_USER &&
+        adminPass.value === ADMIN_PASS
+    ) {
+        isAdmin = true;
+        localStorage.setItem("admin", true);
+        alert("Admin angemeldet ✅");
+        renderAdminBox();
+    } else {
+        alert("Falsche Daten ❌");
+    }
+}
+
+function logout() {
+    isAdmin = false;
+    localStorage.removeItem("admin");
+    renderAdminBox();
+}
+
+/* Fonts */
+function setFont(font) {
+    document.documentElement.style.setProperty("--font-main", font);
+}
+
+/* Artikel */
+function renderList(list = articles) {
+    articleList.innerHTML = "";
+    list.forEach((a, i) => {
+        articleList.innerHTML += `<a onclick="openArticle(${i})">${a.title}</a>`;
+    });
+}
+
+function openArticle(index) {
+    const a = articles[index];
+    content.innerHTML = `
+        <h2>${a.title}</h2>
+        <p>${a.text.replace(/\n/g, "<br>")}</p>
+        ${a.image ? `<img class="articleImage" src="${a.image}">` : ""}
+        ${isAdmin ? `<hr><button onclick="deleteArticle(${index})">🗑️ Löschen</button>` : ""}
+    `;
+}
+
+function deleteArticle(index) {
+    if (!confirm("Artikel wirklich löschen?")) return;
+    articles.splice(index, 1);
+    save();
+    content.innerHTML = "<p>Artikel gelöscht ❌</p>";
+}
+
+/* Editor */
+function showEditor() {
+    content.innerHTML = `
+        <h2>Neuer Artikel</h2>
+        <input id="title" placeholder="Titel">
+        <textarea id="text" rows="8" placeholder="Text"></textarea>
+        <input type="file" id="image" accept="image/*">
+        <small>Max. 500 KB</small><br><br>
+        <button onclick="saveArticle(this)">Speichern</button>
+    `;
+}
+
+function saveArticle(btn) {
+    const title = document.getElementById("title").value.trim();
+    const text = document.getElementById("text").value.trim();
+    const file = document.getElementById("image").files[0];
+
+    if (!title || !text) return alert("Titel & Text erforderlich");
+
+    btn.disabled = true;
+    btn.innerText = "Speichere...";
+
+    const article = { title, text, image: null };
+
+    if (file) {
+        if (file.size > MAX_IMAGE_SIZE) {
+            alert("Bild zu groß!");
+            btn.disabled = false;
+            btn.innerText = "Speichern";
+            return;
+        }
+        const r = new FileReader();
+        r.onload = e => {
+            article.image = e.target.result;
+            finalize(article);
+        };
+        r.readAsDataURL(file);
+    } else {
+        finalize(article);
+    }
+}
+
+function finalize(article) {
+    articles.push(article);
+    save();
+    content.innerHTML = "<p>Artikel gespeichert ✅</p>";
+}
+
+function save() {
+    localStorage.setItem("miniwiki", JSON.stringify(articles));
+    renderList();
+}
+
+/* Suche */
+function searchArticles() {
+    const q = search.value.toLowerCase();
+    renderList(articles.filter(a =>
+        a.title.toLowerCase().includes(q) ||
+        a.text.toLowerCase().includes(q)
+    ));
+}
+
+renderList();
+renderAdminBox();
+</script>
+
+</body>
+</html>
