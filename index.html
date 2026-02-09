@@ -2,36 +2,21 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Maurice MiniWiki</title>
+<title>MiniWiki</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
-:root { --font-main: serif; }
-body { margin:0; font-family:var(--font-main); background:#f6f6f6; }
-#header {
-    background:#fff; border-bottom:1px solid #a2a9b1;
-    padding:8px 15px; display:flex; justify-content:space-between;
-}
+body { font-family: serif; margin:0; background:#f6f6f6; }
+#header { background:#fff; padding:10px 15px; border-bottom:1px solid #a2a9b1; display:flex; justify-content:space-between; }
 #container { display:flex; }
-#sidebar {
-    width:250px; background:#f8f9fa; border-right:1px solid #a2a9b1;
-    padding:15px;
-}
-#sidebar input, #sidebar select, #sidebar button {
-    width:100%; margin-bottom:10px; padding:6px;
-}
-#articleList a {
-    display:block; color:#0645ad; cursor:pointer; margin:5px 0;
-}
-#content { padding:25px; background:white; width:100%; }
-#adminBox {
-    position:fixed; bottom:10px; right:10px;
-    background:white; border:1px solid #a2a9b1;
-    padding:10px; width:180px; font-size:13px;
-}
+#sidebar { width:250px; padding:15px; background:#f8f9fa; border-right:1px solid #a2a9b1; }
+#sidebar input, #sidebar select, #sidebar button { width:100%; margin-bottom:10px; padding:6px; }
+#articleList a { display:block; color:#0645ad; margin:5px 0; cursor:pointer; }
+#content { flex:1; padding:25px; background:white; }
+#adminBox { position:fixed; bottom:10px; right:10px; background:white; border:1px solid #a2a9b1; padding:10px; width:180px; font-size:13px; }
 </style>
 </head>
 
@@ -43,40 +28,32 @@ body { margin:0; font-family:var(--font-main); background:#f6f6f6; }
 </div>
 
 <div id="container">
-
 <div id="sidebar">
     <input id="search" placeholder="Suchen..." oninput="searchArticles()">
-
     <select onchange="setFont(this.value)">
         <option value="serif">Wikipedia</option>
         <option value="Arial, sans-serif">Modern</option>
         <option value="monospace">Monospace</option>
     </select>
-
-    <button id="addBtn" onclick="showEditor()" style="display:none">
-        ➕ Artikel hinzufügen
-    </button>
-
+    <button id="addBtn" onclick="showEditor()" style="display:none">➕ Artikel hinzufügen</button>
     <div id="articleList"></div>
 </div>
 
 <div id="content">
     <h2>Willkommen</h2>
-    <p>MiniWiki mit echter Datenbank</p>
+    <p>MiniWiki mit Firestore Datenbank</p>
 </div>
-
 </div>
 
 <div id="adminBox"></div>
 
 <script>
-/* 🔥 FIREBASE CONFIG (HIER DEINE DATEN EINTRAGEN) */
+/* FIREBASE CONFIG ERSETZEN */
 const firebaseConfig = {
-  apiKey: "DEIN_API_KEY",
-  authDomain: "DEIN_PROJEKT.firebaseapp.com",
-  projectId: "DEIN_PROJEKT",
+    apiKey: "DEIN_API_KEY",
+    authDomain: "DEIN_PROJEKT.firebaseapp.com",
+    projectId: "DEIN_PROJEKT"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -85,76 +62,76 @@ const ADMIN_USER = "Maurice";
 const ADMIN_PASS = "1234";
 let isAdmin = false;
 
-/* ARTIKEL */
+/* ARTIKEL ARRAY */
 let articles = [];
 
-/* ADMIN UI */
-function renderAdminBox() {
-    adminBox.innerHTML = isAdmin ? `
-        <b>Admin</b><br>
-        <button onclick="logout()">Logout</button>
-    ` : `
-        <b>Admin Login</b><br>
-        <input id="adminUser" placeholder="Name">
-        <input id="adminPass" type="password" placeholder="Passwort">
-        <button onclick="login()">Login</button>
-    `;
+/* Admin Box */
+function renderAdminBox(){
+    adminBox.innerHTML = isAdmin ? 
+    `<b>Admin</b><br><button onclick="logout()">Logout</button>` :
+    `<b>Admin Login</b><br>
+     <input id="adminUser" placeholder="Name">
+     <input id="adminPass" type="password" placeholder="Passwort">
+     <button onclick="login()">Login</button>`;
 }
 
-function login() {
-    if (adminUser.value === ADMIN_USER && adminPass.value === ADMIN_PASS) {
-        isAdmin = true;
+function login(){
+    if(adminUser.value===ADMIN_USER && adminPass.value===ADMIN_PASS){
+        isAdmin=true;
         renderAdminBox();
         updateAdminUI();
-        alert("Admin ✅");
-    } else alert("Falsch ❌");
+        alert("Admin angemeldet ✅");
+    } else alert("Falsche Daten ❌");
 }
 
-function logout() {
-    isAdmin = false;
+function logout(){
+    isAdmin=false;
     renderAdminBox();
     updateAdminUI();
 }
 
-function updateAdminUI() {
+/* Zeige Button nur für Admin */
+function updateAdminUI(){
     addBtn.style.display = isAdmin ? "block" : "none";
 }
 
 /* FONT */
-function setFont(font) {
+function setFont(font){
     document.documentElement.style.setProperty("--font-main", font);
 }
 
-/* ARTIKEL LADEN (DATENBANK) */
-function loadArticles() {
-    db.collection("articles").onSnapshot(snapshot => {
-        articles = [];
-        snapshot.forEach(doc => {
-            articles.push({ id: doc.id, ...doc.data() });
+/* Artikel laden (immer aktuell) */
+function loadArticles(){
+    db.collection("articles").onSnapshot(snapshot=>{
+        articles=[];
+        snapshot.forEach(doc=>{
+            articles.push({id:doc.id, ...doc.data()});
         });
         renderList();
     });
 }
 
-function renderList(list = articles) {
-    articleList.innerHTML = "";
-    list.forEach((a, i) => {
-        articleList.innerHTML += `<a onclick="openArticle(${i})">${a.title}</a>`;
+/* Liste rendern */
+function renderList(list=articles){
+    articleList.innerHTML="";
+    list.forEach((a,i)=>{
+        articleList.innerHTML+=`<a onclick="openArticle(${i})">${a.title}</a>`;
     });
 }
 
-function openArticle(i) {
-    const a = articles[i];
-    content.innerHTML = `
+/* Artikel öffnen */
+function openArticle(i){
+    const a=articles[i];
+    content.innerHTML=`
         <h2>${a.title}</h2>
         <p>${a.text.replace(/\n/g,"<br>")}</p>
-        ${isAdmin ? `<button onclick="deleteArticle(${i})">🗑 Löschen</button>` : ""}
+        ${isAdmin?`<button onclick="deleteArticle(${i})">🗑 Löschen</button>`:""}
     `;
 }
 
-/* ARTIKEL ERSTELLEN */
-function showEditor() {
-    content.innerHTML = `
+/* Artikel Editor */
+function showEditor(){
+    content.innerHTML=`
         <h2>Neuer Artikel</h2>
         <input id="title" placeholder="Titel"><br><br>
         <textarea id="text" rows="8" placeholder="Text"></textarea><br><br>
@@ -162,29 +139,26 @@ function showEditor() {
     `;
 }
 
-function saveArticle() {
-    const title = document.getElementById("title").value.trim();
-    const text = document.getElementById("text").value.trim();
-    if (!title || !text) return alert("Titel & Text!");
-
-    db.collection("articles").add({ title, text }).then(() => {
-        content.innerHTML = "<p>Gespeichert ✅</p>";
+/* Artikel speichern */
+function saveArticle(){
+    const title=document.getElementById("title").value.trim();
+    const text=document.getElementById("text").value.trim();
+    if(!title||!text) return alert("Titel & Text erforderlich");
+    db.collection("articles").add({title,text}).then(()=>{
+        content.innerHTML="<p>Artikel gespeichert ✅</p>";
     });
 }
 
-/* LÖSCHEN */
-function deleteArticle(i) {
-    if (!confirm("Wirklich löschen?")) return;
+/* Artikel löschen */
+function deleteArticle(i){
+    if(!confirm("Artikel wirklich löschen?")) return;
     db.collection("articles").doc(articles[i].id).delete();
 }
 
-/* SUCHE */
-function searchArticles() {
-    const q = search.value.toLowerCase();
-    renderList(articles.filter(a =>
-        a.title.toLowerCase().includes(q) ||
-        a.text.toLowerCase().includes(q)
-    ));
+/* Suche */
+function searchArticles(){
+    const q=search.value.toLowerCase();
+    renderList(articles.filter(a=>a.title.toLowerCase().includes(q) || a.text.toLowerCase().includes(q)));
 }
 
 /* START */
@@ -192,6 +166,5 @@ loadArticles();
 renderAdminBox();
 updateAdminUI();
 </script>
-
 </body>
 </html>
